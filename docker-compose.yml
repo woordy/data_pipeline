@@ -1,0 +1,126 @@
+version: '3.5'
+networks:
+    price-ticketing-network:
+      name: price-ticketing-network
+      driver: bridge
+      ipam:
+        driver: default
+        config:
+          - subnet: 192.168.100.0/24
+services:
+  zookeeper:
+    image: zookeeper:3.4.9
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    networks:
+      - price-ticketing-network
+  kafka:
+    image: wurstmeister/kafka:2.12-2.3.0
+    environment:
+      HOSTNAME_COMMAND: "/sbin/ip route|awk  '/src/ {  print $$NF}'"
+      KAFKA_ADVERTISED_PORT: 9092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    depends_on:
+      - zookeeper
+    ports:
+      - 9092
+    networks:
+      - price-ticketing-network
+
+  cassandra-seed:
+    image: cassandra
+    container_name: cassandra-seed
+    depends_on:
+      - kafka
+    ports:
+      - "9042:9042" # Native transport
+      - "7199:7199"   # JMX
+      - "9160:9160"   # Thrift clients
+    networks:
+      price-ticketing-network:
+        ipv4_address: ${CASSANDRA_CLUSTER_SEED_IP}
+    volumes:
+      - ./data/cassandra/node01:/data/cassandra
+    environment:
+      CASSANDRA_CLUSTER_NAME: CassandraCluster
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+      CASSANDRA_DC: datacenter1
+  cassandra-node-01:
+    image: cassandra
+    container_name: cassandra-node-01
+    depends_on:
+      - cassandra-seed
+    networks:
+      - price-ticketing-network
+    volumes:
+      - ./data/cassandra/node02:/data/cassandra
+    environment:
+      CASSANDRA_CLUSTER_NAME: CassandraCluster
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+      CASSANDRA_DC: datacenter2
+      CASSANDRA_SEEDS: cassandra-seed
+
+  cassandra-node-02:
+    image: cassandra
+    container_name: cassandra-node-02
+    depends_on:
+      - cassandra-seed
+    networks:
+      - price-ticketing-network
+    volumes:
+      - ./data/cassandra/node02:/data/cassandra
+    environment:
+      CASSANDRA_CLUSTER_NAME: CassandraCluster
+      CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+      CASSANDRA_DC: datacenter2
+      CASSANDRA_SEEDS: cassandra-seed
+
+  postgres-db:
+    image: postgres
+    container_name: postgres
+    restart: always
+    networks:
+      price-ticketing-network:
+        ipv4_address: ${POSTGRES_SERVER_IP}
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}                # Database name
+      - POSTGRES_USER=${POSTGRES_USER}                # Specify user
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}        # Password for root access
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgres/data
+
+  python:
+    container_name : price-ticketing-python
+    environment:
+      - x_rapidapi_key=${x_rapidapi_key}
+      - x_rapidapi_host=${x_rapidapi_host}
+      - base_url=${base_url}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - CASSANDRA_CLUSTER_SEED_IP=${CASSANDRA_CLUSTER_SEED_IP}
+      - CASSANDRA_PORT=${CASSANDRA_PORT}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - POSTGRES_SERVER_IP=${POSTGRES_SERVER_IP}       # Postgress server ip
+      - POSTGRES_DB=${POSTGRES_DB}                  # Postgress database
+      - POSTGRES_USER=${POSTGRES_USER}              # Postgress user
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}      # POSTGRES_PASSWORD
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - CONSUMER_GROUP=${CONSUMER_GROUP}
+      - KEYSPACE=${KEYSPACE}
+
+    build:
+      context: .
+      args:
+        - CI_USER_TOKEN=${CI_USER_TOKEN}
+    networks:
+      - price-ticketing-network
+    command: tail -f /dev/null
+    ports:
+      - "8000:8000" # Django http port
+    volumes:
+      - .:/app
+
+

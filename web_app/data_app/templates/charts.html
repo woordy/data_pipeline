@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+          integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
+    <title>Dashboards</title>
+</head>
+<body>
+
+<div class="container">
+    <div class ="row">
+        <div class="col-md-12">
+        <h1 class="text-center">Final Project- Eliud Omollo</h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+                In this project, we develop a full end to end Data pipepline that does the following:
+                 <ul>
+                    <li><b>Scanner:</b> Gets real time price ticket prices from a price pricing API every 80 seconds. A single API call generates ~14 quotes </li>
+                     <li><b>Kafka Producer:</b>
+                        <p>A Kafka producer serializes and sends a key value pair topic to a 3 node kafka cluster node that is managed by Zookeeper.
+                        The kafka producer is designed with <b>Replication factor</b> of 2 and with 6 partitions </p>
+                     </li>
+                     <li><b>Kafka Consumer:</b> 3 Consumers subscribe to the topic:
+                        <ol>
+                            <li><b>Cassandra Consumer:</b> NO SQL Cassandra DB consumes individual quotes. The cassandra is configured with 3 datacenters: 1 node on datacenter 1 and  2 nodes on
+                            datacenter 2</li>
+                            <li><b>Prostgres Consumer:</b><p>Consumes and provides aggregated prices of streaming data. Because we want aggregated data over multiple dimensions e.g. source, destination, departure time, arrival time,
+                                airline, we capture running counts of quotes from A to B as well sum of all tickets from A to B for every message consumed. Downstream processes then provide
+                                aggregated values based on end user input.</p>
+                                    <p>Progres also provides a secondary advantage of allowing join tables(that is expensive under cassandra. The postgress database is normalized using snowflake schema.</p>
+                            </li>
+                            <li><b>S3 Bucket:</b>We simultaneously store quotes received from kafka to an S3 bucket for long term storage.
+                                S3 buckets are generally cheaper than maintaining EC2 and EMR instances for long term storage. The long term data stored may be used for Machine Learning.</li>
+                        </ol>
+                    </li>
+                     <li><b>Django</b>
+                          <p>We use Django to develop postgres tables/models. We use a combination of Django ORM and SQLAchemy to interact with Postgres</p>
+                         <ul>
+                             <li><b>Django REST API</b>
+                              <p>We use Django REST API to develop UI for the live <a href="#real-time-dashboards">dashboards</a> shown below</p></li>
+                         </ul>
+                     </li>
+                     <li><b>UI</b>
+                         <p>To produce the dashboard, we use a combination of <b>chart.js</b> and <b>jquery</b> to perform ajax calls to the Django REST API that we developed above.
+                             We also use <b>bootstrap</b> for layout. This allows for the dashboards to appear correctly in both desktops and mobile devices.
+                             <b>The kafka producer generates new messages every 80 seconds so the <a href="#real-time-dashboards">dashboards</a> will update every 80 seconds with new data </b></p>
+                     </li>
+                </ul>
+        </div>
+    </div>
+     <div class="row">
+        <div class="col-md-12">
+            <div id ="real-time-dashboards">
+                <h1 class="text-center">Architecture Summary</h1>
+            </div>
+
+        </div>
+    </div>
+    <div class="row">
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <b>Data Pipeline</b>
+        <img src="{% static "images/pipeline.png" %}" alt = "unable to locate image" class="img-fluid">
+        </div>
+        <div class="col-md-6">
+            <b>Docker Configuration</b>
+            <img src="{% static "images/implementation.png" %}" alt = "unable to locate image" class="img-fluid">
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="row mt-3"></div>
+        </div>
+        <div class="col-md-12">
+            <div class="row mt-3"></div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <div id ="real-time-dashboards">
+                <h1 class="text-center">Real Time Dashboard</h1>
+            </div>
+
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <canvas id="airport-depart"></canvas>
+            <b>Query Implemented using Django ORM</b>
+            <p>The above graph is generated using django standard queryset and annonate aggregate functions. Recall that the aggregated function here is a aggregated
+            result based pre-aggregated result from done at kafka consumer level.  </p>
+        </div>
+        <div class="col-md-12">
+            <canvas id="priceChart"></canvas>
+            <b>Query Implemented using Dask</b>
+            <p>The above graph is generated using dask for parallelization. Again this is made against pre-aggregated data. Even though the 2 queries have different search criteria, we notice that the
+            dask approach seems to load about a second later. Perhaps this could be due to .compute() method of dask.</p>
+        </div>
+    </div>
+</div>
+
+
+<script src="https://code.jquery.com/jquery-3.4.1.min.js"
+        integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"></script>
+<script>
+    $(document).ready(function () {
+        let endpoint_prices = 'api/chart/prices';
+        let endpoint_airports = 'api/chart/airports';
+
+        $.ajax({
+            method: "GET",
+            url: endpoint_prices,
+            success: function (data) {
+                labels = data.labels
+                data = data.data
+                console.log(labels)
+                console.log(data)
+                let myChart = document.getElementById('priceChart').getContext('2d');
+                let priceChart = new Chart(myChart, {
+                    type: 'line',  // Options available  horizontalBar, pie, line, doughnut, rada, polarArea
+                    data: {
+                        labels: labels,
+                        // datasets can have many datasets as dictionary
+                        datasets: [
+                            {
+                                label: 'Average Ticket Price',
+                                data: data,
+                                // backgroundColor:'green'
+                                backgroundColor: [
+                                    'rgba(255, 99, 132, 0.6)',
+                                    'rgba(54, 162, 235, 0.6)',
+                                    'rgba(255, 206, 86, 0.6)',
+                                    'rgba(75, 192, 192, 0.6)',
+                                    'rgba(153, 102, 255, 0.6)',
+                                ],
+                                borderWidth: 1,
+                                borderColor: '#777',
+                                hoverBorderWidth: 2,
+                                hoverBOrderColor: '#000'
+                            },]
+                    },
+                    options: {
+                        title: {
+                            display: true,
+                            text: 'Average Ticket Prices by Date\nLas Vegas Mccarran to Minneapolis St Paul',
+                            fontSize: 25
+                        },
+                        legend: {
+                            display: true,
+                            position: 'right'
+                        },
+
+                        layout: {
+                            padding: {
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                top: 0
+                            }
+                        },
+                        tooltip: {
+                            enabled: true
+                        }
+                    }
+                })
+
+            },
+            error: function (error_data) {
+                console.log('error')
+                console.log(error_data)
+
+            }
+        });
+        $.ajax({
+            method: "GET",
+            url: endpoint_airports,
+            success: function (data) {
+                labels = data.labels
+                data = data.data
+                console.log(labels)
+                console.log(data)
+
+                let ict_unit = [];
+                let efficiency = [];
+                let coloR = [];
+                // create random colors
+                let dynamicColors = function () {
+                    let r = Math.floor(Math.random() * 255);
+                    let g = Math.floor(Math.random() * 255);
+                    let b = Math.floor(Math.random() * 255);
+                    return "rgb(" + r + "," + g + "," + b + ")";
+                };
+
+                for (let i in data) {
+                    ict_unit.push("ICT Unit " + data[i].ict_unit);
+                    efficiency.push(data[i].efficiency);
+                    coloR.push(dynamicColors());
+                }
+
+                let airportPartChart = document.getElementById('airport-depart').getContext('2d');
+                let priceChart = new Chart(airportPartChart, {
+                    type: 'bar',  // Options available  bar, horizontalBar, pie, line, doughnut, rada, polarArea
+                    data: {
+                        labels: labels,
+
+                        datasets: [
+                            {
+                                label: 'Flight count from Airport',
+                                data: data,
+                                backgroundColor: coloR,
+                                borderWidth: 1,
+                                borderColor: '#777',
+                                hoverBorderWidth: 2,
+                                hoverBOrderColor: '#000'
+                            },]
+                    },
+                    options: {
+                        title: {
+                            display: true,
+                            text: 'Number of Flights Originating from Airport',
+                            fontSize: 25
+                        },
+                        legend: {
+                            display: false,
+                            position: 'right'
+                        },
+
+                        layout: {
+                            padding: {
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                top: 0
+                            }
+                        },
+                        tooltip: {
+                            enabled: true
+                        }
+                    }
+                })
+
+            },
+            error: function (error_data) {
+                console.log('error')
+                console.log(error_data)
+
+            }
+        })
+        //Global Options
+        Chart.defaults.global.defaultFontFamily = 'Lato';
+        Chart.defaults.global.defaultFontSize = 18;
+        Chart.defaults.global.defaultFontColor = '#777';
+
+    })
+</script>
+
+</body>
+</html>
