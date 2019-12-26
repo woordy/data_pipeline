@@ -113,8 +113,6 @@ services:
 
     build:
       context: .
-      args:
-        - CI_USER_TOKEN=${CI_USER_TOKEN}
     networks:
       - price-ticketing-network
     command: tail -f /dev/null
