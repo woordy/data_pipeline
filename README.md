@@ -1,5 +1,5 @@
-[![Build Status](https://travis-ci.com/csci-e-29/2019fa-final-project-e-omollo.svg?token=MmTYTF6ZHvjSKR4APgr4&branch=master)](https://travis-ci.com/csci-e-29/2019fa-final-project-e-omollo)
-# FINAL PROJECT
+[![Build Status](https://travis-ci.com/woordy/data_pipeline.svg?branch=master)](https://travis-ci.com/woordy/data_pipeline)
+# END TO END DATA PIPELINE
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
