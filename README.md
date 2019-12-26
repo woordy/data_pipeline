@@ -30,6 +30,8 @@ In this project, we will gather real time ticket pricing to answer the following
     <li>Which airlines offer the best rates?</li>
 </ul>
 
+The focus of this project is to show the data pipeline. We are not concerned with the accuracy of the information.
+
 ## Architecture
 
 The architecture is configured as follows:
