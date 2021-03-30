@@ -15,7 +15,7 @@ coreschema==0.0.4
 coverage==4.5.4
 dask==2.8.1
 defusedxml==0.6.0
-Django==3.0
+Django==3.0.12
 django-allauth==0.40.0
 django-crispy-forms==1.8.1
 django-debug-toolbar==2.1
