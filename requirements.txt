@@ -48,7 +48,7 @@ pandas==0.25.3
 partd==1.1.0
 pluggy==0.13.1
 psycopg2==2.8.4
-py==1.8.0
+py==1.10.0
 py4j==0.10.7
 pyasn1==0.4.8
 pycparser==2.19
