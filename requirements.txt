@@ -13,7 +13,7 @@ colorama==0.4.1
 coreapi==2.3.3
 coreschema==0.0.4
 coverage==4.5.4
-dask==2.8.1
+dask==2021.10.0
 defusedxml==0.6.0
 Django==3.0
 django-allauth==0.40.0
