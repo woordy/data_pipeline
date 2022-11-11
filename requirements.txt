@@ -53,7 +53,7 @@ py4j==0.10.7
 pyasn1==0.4.8
 pycparser==2.19
 pyparsing==2.4.5
-pyspark==2.4.4
+pyspark==3.2.2
 pytest==5.3.1
 pytest-cov==2.8.1
 pytest-django==3.7.0
